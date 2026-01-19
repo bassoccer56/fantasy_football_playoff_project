@@ -43,6 +43,7 @@ services:
       - DB_NAME=${DB_NAME:-fantasy_league}   # Added this
       - DB_PASSWORD=${DB_PASSWORD}
       - SPORTS_API_KEY=${SPORTS_API_KEY}
+      - PYTHONUNBUFFERED=1
     depends_on:
       db:
         condition: service_healthy
