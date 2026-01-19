@@ -1,4 +1,4 @@
-# REAME for fantasy football playoff project
+# README for fantasy football playoff project
 🏈 NFL Fantasy Football Playoff Project
 A real-time fantasy football leaderboard that syncs active NFL player data from the Sleeper API and provides a searchable, high-performance web interface.
 
