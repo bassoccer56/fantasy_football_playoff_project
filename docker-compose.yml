@@ -2,26 +2,49 @@ services:
   # The Database
   db:
     image: postgres:15
+    restart: always
+    # Pulls values from your .env file automatically
     environment:
-      POSTGRES_USER: fantasy_user
-      POSTGRES_PASSWORD: fantasy_password
-      POSTGRES_DB: fantasy_db
+      POSTGRES_USER: ${DB_USER:-fantasy_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-fantasy_league}
+    ports:
+      - "5432:5432" # Allows you to connect from your Windows desktop
     volumes:
       - db_data:/var/lib/postgresql/data
+      # This line runs your init.sql automatically on first startup
+      - ./database:/docker-entrypoint-initdb.d
+    # --- ADD THIS SECTION BELOW ---
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-fantasy_admin} -d ${DB_NAME:-fantasy_league}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # Your Node.js API
+  # Your Node.js API (The Website Backend)
   api:
     build: ./backend-node
+    restart: always
     ports:
       - "3000:3000"
+    environment:
+      - DB_HOST=db
+      - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
-      - db
+      db:
+        condition: service_healthy # Waits for DB to be fully "ready" before starting
 
-  # Your Python Data Engine
+  # Your Python Data Engine (The Scraper/Simulator)
   engine:
     build: ./engine-python
+    restart: always
+    environment:
+      - DB_HOST=db
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SPORTS_API_KEY=${SPORTS_API_KEY}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 volumes:
   db_data:
