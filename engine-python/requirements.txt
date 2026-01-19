@@ -1,0 +1,11 @@
+# Database adapter for PostgreSQL
+psycopg2-binary
+
+# Data manipulation (great for processing player stats)
+pandas
+
+# For fetching data from sports APIs (when you're ready)
+requests
+
+# Optional: Real-time event handling
+python-dotenv

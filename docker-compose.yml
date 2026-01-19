@@ -1,0 +1,27 @@
+services:
+  # The Database
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: fantasy_user
+      POSTGRES_PASSWORD: fantasy_password
+      POSTGRES_DB: fantasy_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  # Your Node.js API
+  api:
+    build: ./backend-node
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+
+  # Your Python Data Engine
+  engine:
+    build: ./engine-python
+    depends_on:
+      - db
+
+volumes:
+  db_data:
