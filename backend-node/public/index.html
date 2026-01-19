@@ -8,7 +8,6 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a2e; color: white; text-align: center; margin: 0; padding: 20px; }
         h1 { color: #e94560; text-transform: uppercase; letter-spacing: 2px; }
         
-        /* Flex container to show cards in a nice grid */
         #leaderboard { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin-top: 30px; }
         
         .card { 
@@ -21,12 +20,22 @@
             position: relative;
         }
         
-        /* Highlight the #1 player */
         .card:first-child { border-color: #e94560; transform: scale(1.05); box-shadow: 0 0 15px rgba(233, 69, 96, 0.4); }
         .card:first-child::before { content: "👑"; position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 1.5rem; }
 
         .points { font-size: 2.5em; color: #e94560; font-weight: bold; margin: 10px 0; }
-        .pos-tag { background: #0f3460; padding: 4px 10px; border-radius: 5px; font-size: 0.8em; text-transform: uppercase; }
+        
+        /* Updated pos-tag to look better with Team name */
+        .pos-tag { 
+            background: #0f3460; 
+            padding: 6px 12px; 
+            border-radius: 5px; 
+            font-size: 0.85em; 
+            text-transform: uppercase; 
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
         
         .status-bar { font-size: 0.8em; color: #4e4e6a; margin-top: 40px; }
     </style>
@@ -34,8 +43,7 @@
 <body>
     <h1>🏆 Playoff Leaderboard</h1>
     
-    <div id="leaderboard">
-        </div>
+    <div id="leaderboard"></div>
 
     <div class="status-bar">
         Auto-refreshing every 5 seconds...
@@ -47,15 +55,15 @@
                 const response = await fetch('/players');
                 const players = await response.json();
                 
-                // 1. Sort players by points (Descending: highest first)
+                // 1. Sort players by points (Descending)
                 players.sort((a, b) => b.points - a.points);
 
                 const container = document.getElementById('leaderboard');
                 
-                // 2. Map data to HTML
+                // 2. Modified Mapping Logic to include Position and Team
                 container.innerHTML = players.map(p => `
                     <div class="card">
-                        <span class="pos-tag">${p.position}</span>
+                        <span class="pos-tag">${p.position} - ${p.team || 'FA'}</span>
                         <h2>${p.name}</h2>
                         <div class="points">${p.points}</div>
                         <p>Total Fantasy Points</p>
@@ -68,10 +76,7 @@
             }
         }
 
-        // Initial load
         loadPlayers();
-
-        // 3. Set Interval for Auto-Refresh (5000ms = 5 seconds)
         setInterval(loadPlayers, 5000);
     </script>
 </body>
