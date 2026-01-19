@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Fantasy Leaderboard</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a2e; color: white; text-align: center; }
+        .card { background: #16213e; padding: 20px; border-radius: 10px; width: 300px; margin: 20px auto; border: 1px solid #0f3460; }
+        .points { font-size: 2em; color: #e94560; font-weight: bold; }
+        button { padding: 10px 20px; background: #0f3460; color: white; border: none; cursor: pointer; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🏆 Playoff Leaderboard</h1>
+    <div id="leaderboard"></div>
+    <button onclick="loadPlayers()">Refresh Scores</button>
+
+    <script>
+        async function loadPlayers() {
+            const response = await fetch('/players');
+            const players = await response.json();
+            const container = document.getElementById('leaderboard');
+            container.innerHTML = players.map(p => `
+                <div class="card">
+                    <h2>${p.name}</h2>
+                    <p>${p.position}</p>
+                    <div class="points">${p.points}</div>
+                </div>
+            `).join('');
+        }
+        // Load data immediately on page load
+        loadPlayers();
+    </script>
+</body>
+</html>
