@@ -137,3 +137,24 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Python 
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.env
+
+# Docker
+.docker/
+# Ignore local database data so it doesn't upload to GitHub
+/database_data/
+# Environment secrets (where you will keep API keys)
+.env
+.env.local
+.env.development.local
+# System files
+.DS_Store
+Thumbs.db
