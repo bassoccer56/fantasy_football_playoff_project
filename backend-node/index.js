@@ -15,11 +15,9 @@ const pool = new Pool({
 });
 
 // 2. MIDDLEWARE
-// Serves images, CSS, and index.html automatically from the public folder
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 3. ROUTES
-// Explicit home route (fallback)
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -27,7 +25,13 @@ app.get('/', (req, res) => {
 // The API endpoint for player data
 app.get('/players', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM players ORDER BY points DESC');
+    // Explicitly selecting 'team' to ensure it's included in the JSON response
+    const query = 'SELECT name, position, team, points FROM players ORDER BY points DESC';
+    const result = await pool.query(query);
+    
+    // Log for debugging: This will show in your Docker terminal
+    console.log(`API: Sending ${result.rows.length} players to frontend.`);
+    
     res.json(result.rows);
   } catch (err) {
     console.error("DETAILED DATABASE ERROR:", err.message);

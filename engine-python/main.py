@@ -1,7 +1,8 @@
 import psycopg2
 import time
 import os
-import random
+import requests
+import sys
 
 def connect_to_db():
     while True:
@@ -14,31 +15,62 @@ def connect_to_db():
             )
             return conn
         except Exception as e:
-            print(f"Waiting for DB... {e}")
+            print(f"Waiting for DB... {e}", flush=True)
             time.sleep(2)
 
-conn = connect_to_db()
-cur = conn.cursor()
+def setup_table():
+    conn = connect_to_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("ALTER TABLE players ADD CONSTRAINT unique_player_name UNIQUE (name);")
+        conn.commit()
+        print("Database: Unique constraint verified.", flush=True)
+    except Exception as e:
+        conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
 
-# Our "Stub" Data
-mock_players = [
-    {"name": "Patrick Mahomes", "pos": "QB"},
-    {"name": "Lamar Jackson", "pos": "QB"},
-    {"name": "Christian McCaffrey", "pos": "RB"},
-    {"name": "Tyreek Hill", "pos": "WR"}
-]
+def sync_from_sleeper():
+    print("Python Engine: Fetching data from Sleeper...", flush=True)
+    try:
+        response = requests.get("https://api.sleeper.app/v1/players/nfl")
+        if response.status_code == 200:
+            all_players = response.json()
+            conn = connect_to_db()
+            cur = conn.cursor()
+            
+            valid_positions = ['QB', 'RB', 'WR', 'TE']
+            count = 0
+            
+            for p_id, info in all_players.items():
+                if info.get('active') and info.get('position') in valid_positions:
+                    name = info.get('full_name')
+                    pos = info.get('position')
+                    team = info.get('team') or 'FA'
+                    
+                    if name:
+                        cur.execute("""
+                            INSERT INTO players (name, position, team, points) 
+                            VALUES (%s, %s, %s, 0)
+                            ON CONFLICT (name) DO UPDATE SET 
+                                position = EXCLUDED.position,
+                                team = EXCLUDED.team;
+                        """, (name, pos, team))
+                        count += 1
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            print(f"Python Engine: Sync Complete! {count} players added.", flush=True)
+        else:
+            print(f"Sleeper API Error: {response.status_code}", flush=True)
+    except Exception as e:
+        # FIXED: Corrected the missing parenthesis below
+        print(f"Sync failed: {e}", flush=True)
 
-while True:
-    for p in mock_players:
-        # Generate a random score bump between 0 and 5
-        score_gain = random.randint(0, 5)
-        
-        cur.execute("""
-            INSERT INTO players (name, position, points) 
-            VALUES (%s, %s, %s)
-            ON CONFLICT (name) DO UPDATE SET points = players.points + %s;
-        """, (p['name'], p['pos'], score_gain, score_gain))
-    
-    conn.commit()
-    print("Python Engine: Scores updated!")
-    time.sleep(5) # Update every 5 seconds for testing
+if __name__ == "__main__":
+    setup_table()
+    sync_from_sleeper()
+    while True:
+        time.sleep(60)
