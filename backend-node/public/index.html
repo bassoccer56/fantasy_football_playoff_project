@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NFL Player List</title>
+    <title>NFL Injury Report</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 40px; }
-        .container { max-width: 1000px; margin: 0 auto; }
+        .container { max-width: 1100px; margin: 0 auto; }
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         h1 { color: #38bdf8; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
         #searchBar {
@@ -19,14 +19,15 @@
         th { background: #334155; color: #94a3b8; padding: 15px 20px; text-transform: uppercase; font-size: 0.8rem; }
         td { padding: 15px 20px; border-bottom: 1px solid #334155; }
         .team-tag { background: #0ea5e9; color: white; padding: 3px 10px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; }
-        .points-val { color: #fbbf24; font-weight: bold; font-family: monospace; }
+        .status-healthy { color: #10b981; font-weight: bold; }
+        .status-injured { color: #ef4444; font-weight: bold; }
         .status-bar { margin-top: 15px; font-size: 0.8rem; color: #64748b; text-align: right; }
     </style>
 </head>
 <body>
     <div class="container">
-        <header><h1>🏈 NFL Player Leaderboard</h1></header>
-        <input type="text" id="searchBar" placeholder="Search players, teams, or positions..." onkeyup="filterTable()">
+        <header><h1>🏈 NFL Active Roster & Injuries</h1></header>
+        <input type="text" id="searchBar" placeholder="Search names, teams, status, or positions..." onkeyup="filterTable()">
         <div class="table-wrapper">
             <table>
                 <thead>
@@ -34,13 +35,14 @@
                         <th>Player Name</th>
                         <th>Position</th>
                         <th>Team</th>
-                        <th>Points</th>
+                        <th>Status</th>
+                        <th>Injury Reason</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody"></tbody>
             </table>
         </div>
-        <div class="status-bar" id="status">Syncing...</div>
+        <div class="status-bar" id="status">Connecting to database...</div>
     </div>
 
     <script>
@@ -51,9 +53,10 @@
                 const response = await fetch('/players');
                 playersData = await response.json();
                 renderTable(playersData);
-                document.getElementById('status').innerText = `Total Players: ${playersData.length} | Updated: ${new Date().toLocaleTimeString()}`;
+                document.getElementById('status').innerText = `Total Players: ${playersData.length} | Last Sync: ${new Date().toLocaleTimeString()}`;
             } catch (e) {
                 console.error("Load failed", e);
+                document.getElementById('status').innerText = "Error loading data.";
             }
         }
 
@@ -63,8 +66,9 @@
                 <tr>
                     <td><strong>${p.name}</strong></td>
                     <td style="color:#94a3b8">${p.position}</td>
-                    <td><span class="team-tag">${p.team || 'FA'}</span></td>
-                    <td class="points-val">${p.points}</td>
+                    <td><span class="team-tag">${p.team}</span></td>
+                    <td><span class="${p.status === 'Healthy' ? 'status-healthy' : 'status-injured'}">${p.status}</span></td>
+                    <td style="font-size: 0.9rem; color: #94a3b8">${p.reason}</td>
                 </tr>
             `).join('');
         }
@@ -74,13 +78,14 @@
             const filtered = playersData.filter(p => 
                 p.name.toLowerCase().includes(q) || 
                 p.team.toLowerCase().includes(q) || 
-                p.position.toLowerCase().includes(q)
+                p.position.toLowerCase().includes(q) ||
+                p.status.toLowerCase().includes(q)
             );
             renderTable(filtered);
         }
 
         loadPlayers();
-        setInterval(loadPlayers, 30000); // Auto-refresh every 30s
+        setInterval(loadPlayers, 10000); // Refresh every 10s to see Python engine updates
     </script>
 </body>
 </html>
