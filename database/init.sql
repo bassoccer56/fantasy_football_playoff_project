@@ -1,22 +1,19 @@
--- 1. Teams Table
 CREATE TABLE IF NOT EXISTS teams (
-    team_id INTEGER PRIMARY KEY,
-    team_name TEXT
+    team_id TEXT PRIMARY KEY,
+    team_name TEXT,
+    team_abv TEXT
 );
 
--- 2. Players Table (Static Info)
 CREATE TABLE IF NOT EXISTS players (
-    player_id INTEGER PRIMARY KEY,
-    player_first_name TEXT,
-    player_last_name TEXT,
-    position VARCHAR(5),
-    team_id INTEGER REFERENCES teams(team_id)
+    player_id TEXT PRIMARY KEY,
+    player_name TEXT,
+    position TEXT,
+    team_id TEXT REFERENCES teams(team_id)
 );
 
--- 3. Injuries Table (Dynamic Info)
 CREATE TABLE IF NOT EXISTS injuries (
-    player_id INTEGER PRIMARY KEY REFERENCES players(player_id),
-    injury_status TEXT,
-    injury_reason TEXT,
+    player_id TEXT PRIMARY KEY REFERENCES players(player_id),
+    description TEXT,
+    status TEXT,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
