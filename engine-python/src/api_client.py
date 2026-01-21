@@ -1,9 +1,23 @@
-import http.client
-import json
-from .config import API_SPORTS_KEY, BASE_URL
+import requests
+import os
 
-def get_api_data(endpoint):
-    conn = http.client.HTTPSConnection(BASE_URL)
-    headers = {'x-apisports-key': API_SPORTS_KEY}
-    conn.request("GET", endpoint, headers=headers)
-    return json.loads(conn.getresponse().read().decode("utf-8"))
+def get_tank01_data(endpoint, params=None):
+    api_key = os.getenv("RAPID_API_KEY")
+    url = f"https://tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com/{endpoint}"
+    
+    headers = {
+        "X-RapidAPI-Key": api_key,
+        "X-RapidAPI-Host": "tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com"
+    }
+
+    try:
+        print(f"DEBUG: Calling API {endpoint}...")
+        response = requests.get(url, headers=headers, params=params)
+        
+        # Check for HTTP errors (like 403 Forbidden or 401 Unauthorized)
+        response.raise_for_status() 
+        
+        return response.json()
+    except Exception as e:
+        print(f"API Error fetching {endpoint}: {e}")
+        return {} # Return empty dict so the loop doesn't crash but skips

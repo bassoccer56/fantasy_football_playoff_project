@@ -1,37 +1,65 @@
 import time
-from .api_client import get_api_data
-from .config import SEASON
+from .api_client import get_tank01_data
 
-def sync_teams(cursor):
-    print("Syncing Teams...")
-    data = get_api_data(f"/teams?league=1&season={SEASON}")
-    for t in data.get("response", []):
-        # Postgres Upsert Syntax
-        cursor.execute("""
-            INSERT INTO teams (team_id, team_name) VALUES (%s, %s)
-            ON CONFLICT (team_id) DO UPDATE SET team_name = EXCLUDED.team_name
-        """, (t['id'], t['name']))
-
-def sync_players(cursor):
-    print("Syncing Player Rosters...")
-    cursor.execute("SELECT team_id FROM teams")
-    teams = cursor.fetchall()
+def sync_teams_and_players(cursor):
+    print("Syncing Teams, Rosters, and Injuries...")
     
-    for (t_id,) in teams:
-        data = get_api_data(f"/players?team={t_id}&season={SEASON}")
-        for p in data.get("response", []):
-            if p['position'] in ['QB', 'RB', 'WR', 'TE']:
-                name_parts = p['name'].split(' ', 1)
-                f_name = name_parts[0]
-                l_name = name_parts[1] if len(name_parts) > 1 else ""
-                
+    # Tank01 returns a dictionary. The list of teams is in 'body'.
+    full_response = get_tank01_data("getNFLTeams", {"rosters": "true"})
+    
+    # FIX: Get the list from the 'body' key. Default to empty list if not found.
+    teams_list = full_response.get('body', [])
+    
+    print(f"DEBUG: API returned {len(teams_list)} teams.")
+
+    for team in teams_list:
+        t_id = team.get('teamID')
+        if not t_id:
+            continue
+            
+        # 1. Insert/Update Team
+        cursor.execute("""
+            INSERT INTO teams (team_id, team_name, team_abv) 
+            VALUES (%s, %s, %s)
+            ON CONFLICT (team_id) DO UPDATE SET 
+                team_name = EXCLUDED.team_name,
+                team_abv = EXCLUDED.team_abv
+        """, (t_id, f"{team.get('teamCity')} {team.get('teamName')}", team.get('teamAbv')))
+
+        # 2. Process Roster
+        # Tank01 returns Roster as a dictionary where key is playerID
+        roster = team.get('Roster', {})
+        players_synced = 0
+        
+        for p_id, p in roster.items():
+            pos = p.get('pos')
+            if pos in ['QB', 'RB', 'WR', 'TE']:
+                # Insert Player
                 cursor.execute("""
-                    INSERT INTO players (player_id, player_first_name, player_last_name, position, team_id) 
-                    VALUES (%s, %s, %s, %s, %s)
-                    ON CONFLICT (player_id) DO UPDATE SET 
-                        player_first_name = EXCLUDED.player_first_name,
-                        player_last_name = EXCLUDED.player_last_name,
+                    INSERT INTO players (player_id, player_name, position, team_id)
+                    VALUES (%s, %s, %s, %s) 
+                    ON CONFLICT (player_id) DO UPDATE SET
+                        player_name = EXCLUDED.player_name,
                         position = EXCLUDED.position,
                         team_id = EXCLUDED.team_id
-                """, (p['id'], f_name, l_name, p['position'], t_id))
-        time.sleep(0.6)
+                """, (p_id, p.get('longName'), pos, t_id))
+                
+                players_synced += 1
+                
+                # 3. Process Injury
+                injury = p.get('injury')
+                if injury:
+                    # Handle cases where injury might be a string or a dict
+                    desc = injury.get('description', 'No description') if isinstance(injury, dict) else str(injury)
+                    status = p.get('espnStatus', 'Questionable')
+                    
+                    cursor.execute("""
+                        INSERT INTO injuries (player_id, description, status)
+                        VALUES (%s, %s, %s) 
+                        ON CONFLICT (player_id) 
+                        DO UPDATE SET description = EXCLUDED.description, status = EXCLUDED.status
+                    """, (p_id, desc, status))
+        
+        print(f"  - Synced {team.get('teamAbv')}: {players_synced} fantasy players.")
+
+    print("Sync complete!")
