@@ -22,21 +22,34 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// The API endpoint for player data
+// Main Endpoint: Joins Players, Teams, and Injuries
 app.get('/players', async (req, res) => {
   try {
-    // Explicitly selecting 'team' to ensure it's included in the JSON response
-    const query = 'SELECT name, position, team, points FROM players ORDER BY points DESC';
+    const query = `
+      SELECT 
+        p.player_id, 
+        p.player_first_name || ' ' || p.player_last_name AS name, 
+        p.position, 
+        t.team_name AS team,
+        COALESCE(i.injury_status, 'Healthy') AS status,
+        COALESCE(i.injury_reason, 'N/A') AS reason
+      FROM players p
+      JOIN teams t ON p.team_id = t.team_id
+      LEFT JOIN injuries i ON p.player_id = i.player_id
+      ORDER BY t.team_name ASC, p.player_last_name ASC
+    `;
     const result = await pool.query(query);
-    
-    // Log for debugging: This will show in your Docker terminal
-    console.log(`API: Sending ${result.rows.length} players to frontend.`);
-    
     res.json(result.rows);
   } catch (err) {
-    console.error("DETAILED DATABASE ERROR:", err.message);
+    console.error("DATABASE ERROR:", err.message);
     res.status(500).send(`Database error: ${err.message}`);
   }
+});
+
+// Optional: Endpoint for just teams
+app.get('/teams', async (req, res) => {
+    const result = await pool.query('SELECT * FROM teams ORDER BY team_name');
+    res.json(result.rows);
 });
 
 // 4. START SERVER
