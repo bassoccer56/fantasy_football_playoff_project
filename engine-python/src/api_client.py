@@ -1,23 +1,23 @@
 import requests
-import os
+from .config import RAPID_API_KEY, API_HOST
 
 def get_tank01_data(endpoint, params=None):
-    api_key = os.getenv("RAPID_API_KEY")
-    url = f"https://tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com/{endpoint}"
+    url = f"https://{API_HOST}/{endpoint}"
     
     headers = {
-        "X-RapidAPI-Key": api_key,
-        "X-RapidAPI-Host": "tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com"
+        "x-rapidapi-key": RAPID_API_KEY,
+        "x-rapidapi-host": API_HOST
     }
-
+    
     try:
-        print(f"DEBUG: Calling API {endpoint}...")
         response = requests.get(url, headers=headers, params=params)
         
-        # Check for HTTP errors (like 403 Forbidden or 401 Unauthorized)
-        response.raise_for_status() 
-        
+        # This will now print the EXACT error message from RapidAPI
+        if response.status_code != 200:
+            print(f"API Error {response.status_code}: {response.text}")
+            
+        response.raise_for_status()
         return response.json()
     except Exception as e:
-        print(f"API Error fetching {endpoint}: {e}")
-        return {} # Return empty dict so the loop doesn't crash but skips
+        print(f"DEBUG: Failed calling {endpoint}. Error: {e}")
+        return {}
