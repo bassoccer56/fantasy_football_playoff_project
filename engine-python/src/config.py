@@ -12,7 +12,7 @@ API_HOST = "tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com"
 # --- PostgreSQL Database Configuration ---
 # 'localhost' is used because Postgres is now running directly on your Windows OS
 DB_CONFIG = {
-    "dbname": os.getenv("DB_NAME", "fantasy_league"),
+    "dbname": os.getenv("DB_NAME", "fantasy_league_Tank01_Data"),
     "user": os.getenv("DB_USER", "fantasy_admin"),
     "password": os.getenv("DB_PASSWORD", "Sdf18943!@!"),
     "host": os.getenv("DB_HOST", "localhost"),  # Changed from 'db' to 'localhost'
