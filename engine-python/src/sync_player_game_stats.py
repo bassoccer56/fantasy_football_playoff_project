@@ -1,11 +1,12 @@
-import psycopg2
 from .api_client import get_tank01_data
-from .config import DB_CONFIG
 
-def sync_game_stats(game_id):
-    conn = None
+def sync_game_stats(conn, game_id):
+    """
+    Syncs player stats and game scores for a specific gameID.
+    Accepts an active psycopg2 connection object and the game_id string.
+    """
+    cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
         cursor = conn.cursor()
 
         querystring = {
@@ -21,13 +22,14 @@ def sync_game_stats(game_id):
             "fumbles": "-2"
         }
 
+        print(f"Fetching Box Score & Stats for {game_id}...")
         data = get_tank01_data("getNFLBoxScore", querystring)
         body = data.get('body', {})
         player_stats_map = body.get('playerStats', {})
         all_pbp = body.get('allPlayByPlay', [])
 
         if not player_stats_map:
-            print(f"No stats found for game {game_id}.")
+            print(f"   No stats found for game {game_id}.")
             return
 
         # --- STEP 1: FG DISTANCE MAPPING ---
@@ -93,6 +95,7 @@ def sync_game_stats(game_id):
                 (dists['30'] * 3) + (dists['40'] * 4) + (dists['50'] * 5) + (dists['60'] * 6)
             )
 
+            # Skip players with zero impact to save DB operations
             if calc_pts == 0 and float(p_data.get('fantasyPoints', 0)) == 0:
                 continue
 
@@ -131,10 +134,12 @@ def sync_game_stats(game_id):
             ))
 
         conn.commit()
-        print(f"SUCCESS: Synced {game_id} stats and updated timestamps.")
+        print(f"   SUCCESS: Synced {game_id} stats.")
 
     except Exception as e:
-        print(f"ERROR: {e}")
-        if conn: conn.rollback()
+        if conn:
+            conn.rollback()
+        print(f"   ERROR in sync_game_stats for {game_id}: {e}")
     finally:
-        if conn: conn.close()
+        if cursor:
+            cursor.close()

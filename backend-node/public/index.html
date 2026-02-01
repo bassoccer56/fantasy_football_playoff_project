@@ -1,15 +1,75 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <title>NFL Fantasy Stats</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
+        .header-container { display: flex; justify-content: space-between; align-items: baseline; }
+        #lastSynced { font-size: 0.9rem; color: #666; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background: #333; color: white; }
+        img { border-radius: 50%; width: 50px; height: 50px; background: #eee; }
+        .fpts-col { font-weight: bold; color: #d32f2f; }
+    </style>
+</head>
 <body>
-    <h1>Fantasy Playoff Injury Report</h1>
-    <div id="data">Loading...</div>
+    <div class="header-container">
+        <h2>Playoff Player Stats</h2>
+        <div id="lastSynced"></div>
+    </div>
+
+    <table id="statsTable">
+        <thead>
+            <tr>
+                <th>Game Info</th>
+                <th>Photo</th>
+                <th>Name</th>
+                <th>Team</th>
+                <th>Pos</th>
+                <th>Game Clock</th>
+                <th>Fantasy Pts</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
     <script>
-        fetch('/api/injuries')
-            .then(r => r.json())
-            .then(data => {
-                const html = data.map(i => `<p><b>${i.player_name} (${i.team_abv})</b>: ${i.description} - ${i.status}</p>`).join('');
-                document.getElementById('data').innerHTML = html;
-            });
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                
+                const tbody = document.querySelector('#statsTable tbody');
+                const syncDiv = document.querySelector('#lastSynced');
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No stats found. Check database joins.</td></tr>';
+                    return;
+                }
+
+                // Update "Last Synced" using the timestamp from the first record
+                if (data[0].last_updated) {
+                    const date = new Date(data[0].last_updated);
+                    syncDiv.innerText = `Last Synced: ${date.toLocaleString()}`;
+                }
+
+                tbody.innerHTML = data.map(row => `
+                    <tr>
+                        <td style="font-weight: bold;">${row.game_info}</td>
+                        <td><img src="${row.player_photo_url || 'https://via.placeholder.com/50'}" alt="photo"></td>
+                        <td><b>${row.long_name}</b></td>
+                        <td>${row.team_abv}</td>
+                        <td>${row.position}</td>
+                        <td>${row.game_clock}</td>
+                        <td class="fpts-col">${parseFloat(row.fantasy_points_calculated).toFixed(2)}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error("Error loading stats:", err);
+            }
+        }
+        loadStats();
     </script>
 </body>
 </html>

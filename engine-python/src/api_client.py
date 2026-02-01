@@ -1,18 +1,27 @@
 import requests
-from .config import RAPID_API_KEY, API_HOST
+import os
 
 def get_tank01_data(endpoint, params=None):
-    url = f"https://{API_HOST}/{endpoint}"
+    # Pull credentials from environment variables set in docker-compose.yml
+    # This replaces the hardcoded imports from .config
+    api_key = os.getenv("RAPIDAPI_KEY")
+    api_host = os.getenv("API_HOST", "tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com")
+    
+    if not api_key:
+        print("ERROR: RAPIDAPI_KEY environment variable is missing!")
+        return {}
+
+    url = f"https://{api_host}/{endpoint}"
     
     headers = {
-        "x-rapidapi-key": RAPID_API_KEY,
-        "x-rapidapi-host": API_HOST
+        "x-rapidapi-key": api_key,
+        "x-rapidapi-host": api_host
     }
     
     try:
         response = requests.get(url, headers=headers, params=params)
         
-        # This will now print the EXACT error message from RapidAPI
+        # Explicitly check for 403 (Subscription) or 429 (Rate Limit) errors
         if response.status_code != 200:
             print(f"API Error {response.status_code}: {response.text}")
             

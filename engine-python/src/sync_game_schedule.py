@@ -1,12 +1,12 @@
-import psycopg2
 from .api_client import get_tank01_data
-from .config import DB_CONFIG
 
-def sync_playoff_scores():
-    conn = None
+def sync_playoff_scores(conn):
+    """
+    Syncs playoff game schedules and live scores.
+    Accepts an active psycopg2 connection object.
+    """
+    cursor = None
     try:
-        print("Connecting to PostgreSQL...")
-        conn = psycopg2.connect(**DB_CONFIG)
         cursor = conn.cursor()
 
         # Step 1: Get the schedule to find all playoff game IDs
@@ -21,12 +21,12 @@ def sync_playoff_scores():
         games_list = schedule_data.get('body', [])
 
         if not games_list:
-            print("No playoff games found in the schedule.")
+            print("   No playoff games found in the schedule.")
             return
 
         for game in games_list:
             game_id = game.get('gameID')
-            print(f"Syncing live data for: {game_id}...")
+            print(f"   Syncing live data for: {game_id}...")
 
             # Step 2: Fetch the Live Box Score for this specific game
             box_data = get_tank01_data("getNFLBoxScore", {"gameID": game_id})
@@ -37,7 +37,7 @@ def sync_playoff_scores():
             away_info = line_score.get('away', {})
             home_info = line_score.get('home', {})
 
-            # Scores pulled from the nested 'totalPts' as requested
+            # Scores pulled from the nested 'totalPts'
             away_score = int(away_info.get('totalPts', 0))
             home_score = int(home_info.get('totalPts', 0))
 
@@ -65,16 +65,15 @@ def sync_playoff_scores():
                 away_score, home_score, status, quarter, clock
             ))
             
-            print(f"   [UPDATED] {game['away']} {away_score} @ {game['home']} {home_score} | {quarter} {clock}")
+            print(f"      [UPDATED] {game['away']} {away_score} @ {game['home']} {home_score} | {quarter} {clock}")
 
         conn.commit()
-        print(f"\nSUCCESS: Synced {len(games_list)} games with live scores and clock data.")
+        print(f"\nSUCCESS: Synced {len(games_list)} games with live scores.")
 
     except Exception as e:
-        print(f"CRITICAL ERROR: {e}")
-        if conn: conn.rollback()
+        if conn:
+            conn.rollback()
+        print(f"CRITICAL ERROR in sync_playoff_scores: {e}")
     finally:
-        if conn: conn.close()
-
-if __name__ == "__main__":
-    sync_playoff_scores()
+        if cursor:
+            cursor.close()
