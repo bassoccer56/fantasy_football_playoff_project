@@ -1,0 +1,16 @@
+To Do:
+
+- Update main.py script to run in perpetuity, updating player game stats every 15 minutes during the Super Bowl (or based on remaining API calls, 84.5% used)
+
+- Check to confirm that configuration is not looking at Localhost database
+
+- Ask Chike what info he needs for projections, found in "Get NFL Betting Odds" endpoint; teamDefenseProjections in "Get Fantasy Point Projections" endpoint
+
+- Check how many API calls are needed to update scores in a game
+
+
+Down the line
+
+- Add change log to table "Get Changelog" endpoint
+
+- Consider adding "Get NFL Depth Charts" endpoint eventually

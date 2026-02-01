@@ -1,33 +1,17 @@
-import psycopg2
 from .api_client import get_tank01_data
-from .config import DB_CONFIG  # Uses the config we set up earlier
 
-def sync_teams():
-    conn = None
+def sync_teams(conn):
     try:
-        # 1. Establish the connection to local Postgres
-        print("Connecting to PostgreSQL...")
-        conn = psycopg2.connect(**DB_CONFIG)
         cursor = conn.cursor()
-
-        # 2. Fetch data from Tank01
         print("Fetching data from Tank01 NFL API...")
         data = get_tank01_data("getNFLTeams")
         
-        # Check if we actually got data back
         teams = data.get('body', [])
         if not teams:
-            print(" No data found in the API response. Check your API key!")
+            print(" No data found in the API response.")
             return
 
-        print(f"Successfully fetched {len(teams)} teams. Starting database sync...")
-
-        # 3. Loop and Insert
         for t in teams:
-            team_id = t.get('teamID')
-            team_abv = t.get('teamAbv')
-            
-            # Removed 'streak', added 'last_updated' logic in the SQL
             cursor.execute("""
                 INSERT INTO teams (
                     team_id, team_abv, team_city, team_name, conference, 
@@ -40,30 +24,16 @@ def sync_teams():
                     tie = EXCLUDED.tie,
                     last_updated = CURRENT_TIMESTAMP;
             """, (
-                team_id, 
-                team_abv, 
-                t.get('teamCity'), 
-                t.get('teamName'),
-                t.get('conference'), 
-                t.get('division'), 
-                int(t.get('wins', 0)), 
-                int(t.get('loss', 0)), 
-                int(t.get('tie', 0)), 
-                t.get('espnLogo1')
+                t.get('teamID'), t.get('teamAbv'), t.get('teamCity'), 
+                t.get('teamName'), t.get('conference'), t.get('division'), 
+                int(t.get('wins', 0)), int(t.get('loss', 0)), 
+                int(t.get('tie', 0)), t.get('espnLogo1')
             ))
             
-            print(f"    Synced: {team_abv}")
-
-        # 4. Commit the changes
         conn.commit()
-        print(f"\n SUCCESS: {len(teams)} teams saved to the database.")
-
+        print(f" SUCCESS: {len(teams)} teams saved.")
     except Exception as e:
-        print(f" DATABASE ERROR: {e}")
-        if conn:
-            conn.rollback()
+        conn.rollback()
+        print(f" DATABASE ERROR in teams: {e}")
     finally:
-        if conn:
-            cursor.close()
-            conn.close()
-            print("PostgreSQL connection closed.")
+        cursor.close()
